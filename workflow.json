@@ -1,0 +1,799 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Study Plan Request",
+        "formDescription": "Leave blank to use the sample, or fill in your own.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Topics to cover",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Deadline",
+              "placeholder": "e.g. 2026-06-10 18:30"
+            },
+            {
+              "fieldLabel": "Study level",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "School"
+                  },
+                  {
+                    "option": "High School"
+                  },
+                  {
+                    "option": "Undergraduate"
+                  },
+                  {
+                    "option": "Postgraduate"
+                  },
+                  {
+                    "option": "Expert / Professional"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "webhookId": "158c8933-07f9-4610-9950-5f8d6ce6b443",
+      "id": "bbce9c13-d512-40bf-90b9-855a00f01128",
+      "name": "On Form Submission",
+      "position": [
+        -4336,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b=$json;\nconst topics=String(b['Topics to cover']||b.topics||'').trim() || 'React Hooks';\nconst level=String(b['Study level']||b.level||'').trim() || 'Undergraduate';\nlet deadline=String(b['Deadline']||b.deadline||'').trim();\nif(!deadline){ deadline=new Date(Date.now()+7*24*3600*1000).toISOString(); }\nreturn [{ json:{ topics, requirement:topics, deadline, level } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "290dabd5-fc2f-44f2-9716-440c89b6ccf5",
+      "name": "Requirement Intake",
+      "position": [
+        -4112,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Check prerequisites. Topics: ' + $json.topics + ' at ' + $json.level + ' level. Identify exactly 2 prerequisite topics, each as a yes/no question. Return ONLY strict JSON, no markdown. Schema: {prerequisites:[{topic:string, question:string}]}. Exactly 2.' }}",
+        "needsFallback": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "id": "b8f9d9cc-f5d1-4570-b270-cc31380d1479",
+      "name": "AI Prerequisite Generator",
+      "position": [
+        -3888,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let raw=$json.text||'{}';raw=String(raw).replace(/```json/gi,'').replace(/```/g,'').trim();\nlet r;try{r=JSON.parse(raw);}catch(e){r={prerequisites:[]};}\nlet pr=Array.isArray(r.prerequisites)?r.prerequisites:[];\nwhile(pr.length<2)pr.push({topic:'General background',question:'Do you have the general background needed?'});\npr=pr.slice(0,2).map(p=>({topic:String(p.topic||'Prerequisite'),question:String(p.question||('Do you know '+(p.topic||'this')+'?'))}));\nconst k=$('Requirement Intake').first().json;\nreturn [{ json:{ prerequisites:pr, topics:k.topics, requirement:k.requirement, deadline:k.deadline, level:k.level } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "6e8c1d80-94ea-46aa-90e3-35d33e780742",
+      "name": "Parse Prerequisites",
+      "position": [
+        -3536,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "={{ $json.prerequisites[0].question }}",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "No"
+                  },
+                  {
+                    "option": "Yes - low"
+                  },
+                  {
+                    "option": "Yes - mid"
+                  },
+                  {
+                    "option": "Yes - sufficient"
+                  },
+                  {
+                    "option": "Yes - complete"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "={{ $json.prerequisites[1].question }}",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "No"
+                  },
+                  {
+                    "option": "Yes - low"
+                  },
+                  {
+                    "option": "Yes - mid"
+                  },
+                  {
+                    "option": "Yes - sufficient"
+                  },
+                  {
+                    "option": "Yes - complete"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "webhookId": "a1b2c3d4-0003-4003-8003-000000000003",
+      "id": "94c70e3c-d42a-40aa-971b-a5209aef5fd2",
+      "name": "Prerequisite Questions Form",
+      "position": [
+        -3312,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const pr=$('Parse Prerequisites').first().json.prerequisites||[];const form=$json;\nconst prereqSummary=pr.map(p=>p.topic+': '+String(form[p.question]||'No')).join('; ');\nconst k=$('Requirement Intake').first().json;\nreturn [{ json:{ prereqSummary, topics:k.topics, requirement:k.requirement, deadline:k.deadline, level:k.level } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "2426f726-bb52-482c-9dc2-13235d1013e9",
+      "name": "Parse Prerequisite Answers",
+      "position": [
+        -3088,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Got it!",
+        "completionMessage": "Designing your syllabus. You'll get an approval email shortly.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "webhookId": "a1b2c3d4-0004-4004-8004-000000000004",
+      "id": "acd8245f-6fb3-4756-bf8f-3ee06e7ce14e",
+      "name": "Form Complete",
+      "position": [
+        -2864,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'You are an expert curriculum designer. Think step by step and question yourself. Now: ' + $now.toISO() + '. Topics requested: ' + $('Parse Prerequisite Answers').first().json.topics + '. Level: ' + $('Parse Prerequisite Answers').first().json.level + '. Deadline: ' + $('Parse Prerequisite Answers').first().json.deadline + '. What the student already knows: ' + $('Parse Prerequisite Answers').first().json.prereqSummary + '. Decide: (1) if vague, expand into a concrete syllabus of specific subtopics, one by one; (2) for each subtopic estimate how many focused study sessions it needs at this level; (3) make sure there are ENOUGH total sessions for the level (school ~4, high school ~4-5, undergraduate at least 5-6, postgraduate ~6-7, expert/professional at least 7-8) and EVERY subtopic is covered at least once even when time is short; (4) judge whether it fits before the deadline. Return ONLY strict JSON, no markdown. Schema: {plausible:boolean, reason:string, goal:string, thoughts:string, syllabus:[{topic:string, detail:string, sessions:number, reason:string}]}. thoughts = brief self-reasoning. If not plausible, syllabus empty. Mark false only for truly absurd targets like mastering quantum mechanics at undergraduate level in 5 minutes.' }}",
+        "needsFallback": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "id": "39d9a393-d29f-4044-9a08-632be973713e",
+      "name": "AI Syllabus Designer (thinking)",
+      "position": [
+        -2640,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "id": "1d48e5ca-a331-4820-acfb-46f6462d4a60",
+      "name": "Gemini Chat Model",
+      "position": [
+        -3872,
+        1760
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "gLAMlwJ81tLTYFhI",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "id": "b7a4622f-8c00-4efa-9b05-9bbed6014e5e",
+      "name": "Groq Chat Model (Fallback)",
+      "position": [
+        -3632,
+        1808
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "vS5vmLJnSvwZn0hZ",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const pa = $('Parse Prerequisite Answers').first().json;\nlet raw = $json.text || '{}';\nraw = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();\nlet r;\ntry { r = JSON.parse(raw); } catch (e) { r = { plausible:true, reason:'', goal:pa.requirement, thoughts:'', syllabus:[{topic:pa.requirement,detail:'',sessions:1,reason:''}] }; }\nconst plausible = r.plausible !== false;\nconst out = { plausible, reason:r.reason||'', goal:r.goal||pa.requirement, thoughts:r.thoughts||'', level:pa.level, deadline:pa.deadline };\nif (!plausible) { return [{ json: out }]; }\nlet syl = Array.isArray(r.syllabus) && r.syllabus.length ? r.syllabus : [{topic:pa.requirement,detail:'',sessions:1,reason:''}];\nlet topics = syl.map(t => ({ topic:String(t.topic||'Topic'), detail:String(t.detail||''), reason:String(t.reason||''), cnt: Math.max(1, Math.min(20, Math.round(Number(t.sessions)||1))) }));\n// level-based MINIMUM total sessions; pad round-robin so every topic is covered and the floor is met\nconst lvl = String(pa.level||'').toLowerCase();\nlet minSessions = 5;\nif (lvl.includes('expert') || lvl.includes('professional')) minSessions = 7;\nelse if (lvl.includes('post')) minSessions = 6;\nelse if (lvl.includes('under')) minSessions = 5;\nelse if (lvl.includes('high') || lvl.includes('school')) minSessions = 4;\nlet total = topics.reduce((a,t)=>a+t.cnt,0);\nlet ri = 0;\nwhile (total < minSessions) { topics[ri % topics.length].cnt += 1; total++; ri++; }\nconst sessions = [];\ntopics.forEach(t => { for (let k=1;k<=t.cnt;k++){ sessions.push({ topic:t.topic, detail:t.detail, label:(t.cnt>1?(' (session '+k+'/'+t.cnt+')'):''), reason:t.reason }); } });\n// Read time window from upstream (set by Extract Decline Context on revise, defaults on first run)\nlet earliestHour = ($json.earliestHour !== undefined && $json.earliestHour !== null) ? $json.earliestHour : 9;\nlet latestHour   = ($json.latestHour   !== undefined && $json.latestHour   !== null) ? $json.latestHour   : 20;\nconst TARGET_TZ='Asia/Kolkata';\nconst kolkata = (d)=> new Date(d.toLocaleString('en-US',{timeZone:TARGET_TZ}));\nconst toISO = (d)=> new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().replace('Z','+05:30');\nlet startDay = kolkata(new Date()); startDay.setDate(startDay.getDate()+1); startDay.setHours(0,0,0,0);\nlet dl = kolkata(new Date(pa.deadline)); if (isNaN(dl.getTime())) { dl = new Date(startDay.getTime() + sessions.length*86400000); } dl.setHours(0,0,0,0);\nlet D = Math.floor((dl.getTime() - startDay.getTime())/86400000) + 1; if (D < 1) D = 1;\nconst N = sessions.length;\nconst dayOf = sessions.map((s,i)=> N===1 ? 0 : Math.round(i*(D-1)/(N-1)));\nconst perDay = {}; dayOf.forEach(d=> perDay[d]=(perDay[d]||0)+1);\nconst seen = {};\nconst scheduled = sessions.map((s,i)=>{\n  const d = dayOf[i];\n  const idxInDay = (seen[d] = (seen[d]||0)); seen[d]++;\n  const cntThisDay = perDay[d];\n  const span = latestHour - earliestHour;\n  const step = cntThisDay>1 ? Math.max(1, Math.floor(span/cntThisDay)) : 0;\n  const hour = Math.min(latestHour - 1, earliestHour + idxInDay * step);\n  const start = new Date(startDay.getTime() + d*86400000); start.setHours(hour,0,0,0);\n  const end = new Date(start.getTime() + 60*60000);\n  const topic = s.topic + s.label;\n  const content = topic + (s.detail ? (': '+s.detail) : '');\n  return { session:i+1, topic, detail:s.detail, content, reason:s.reason, slotStart:toISO(start), slotEnd:toISO(end) };\n});\nout.requestId = 'req_' + Date.now();\nout.deadlineISO = pa.deadline;\nout.parts = scheduled;\nout.partCount = scheduled.length;\nout.minSessions = minSessions;\nout.planText = scheduled.map(s => s.slotStart.split('T')[0] + ' @ ' + s.slotStart.split('T')[1].substring(0,5) + ' - ' + s.topic + (s.reason ? (' ('+s.reason+')') : '')).join('\\n');\nreturn [{ json: out }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "331c7079-60b3-401c-bc73-28609c182284",
+      "name": "Parse & Schedule",
+      "position": [
+        -2288,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.plausible }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "id": "f1020db8-4c16-4f8a-a74c-3cab23128202",
+      "name": "Check Plausible",
+      "position": [
+        -2064,
+        1280
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "rayengester@gmail.com",
+        "subject": "={{ 'Approve your study schedule: ' + $json.goal }}",
+        "message": "={{ 'Proposed schedule (' + $json.level + '), finishing by ' + $json.deadline + ':\\n\\n' + $json.planText + '\\n\\nApprove below, or Decline and tell me why so I can redesign it.' }}",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Approve this plan?",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Decline"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Reason (if declining)",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "webhookId": "a1b2c3d4-0002-4002-8002-000000000002",
+      "id": "5749af17-e4b6-419a-b4c7-a679b58242ec",
+      "name": "Propose Plan & Wait Approval",
+      "position": [
+        -1840,
+        1184
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yvSn6I5dLkWrZ84y",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.data['Approve this plan?'] }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "id": "854ec2f4-3ec4-4a60-8f3e-18a997daee53",
+      "name": "Check Approved",
+      "position": [
+        -1616,
+        1184
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'The student DECLINED the proposed schedule. Their reason: ' + ($('Propose Plan & Wait Approval').first().json.data['Reason (if declining)'] || 'no reason given') + '. The previous syllabus/schedule was:\\n' + $('Parse & Schedule').first().json.planText + '\\nRevise the syllabus to directly address that reason (fewer or more subtopics, fewer or more sessions per subtopic, reorder, lighter pace). Keep it feasible before the deadline. If the user suggests a time period within which to fit your sessions, strictly follow the user preferences. Deadline: ' + $('Parse & Schedule').first().json.deadline + '. Return ONLY strict JSON, no markdown, same schema: {plausible:boolean, reason:string, goal:string, thoughts:string, syllabus:[{topic:string, detail:string, sessions:number, reason:string}]}. plausible must be true.' }}",
+        "needsFallback": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "id": "81f0518c-7c23-4eb4-acc8-07c5aa214aca",
+      "name": "AI Revise Plan",
+      "position": [
+        -1296,
+        1472
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const s=$('Parse & Schedule').first().json;\nreturn s.parts.map(p=>({json:{ requestId:s.requestId, session:p.session, topic:p.topic, detail:p.detail, content:p.content, reason:p.reason, slotStart:p.slotStart, slotEnd:p.slotEnd, status:'scheduled' }}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "0d82ed8f-eefd-43a3-9e90-861a9d5bff65",
+      "name": "Expand Parts",
+      "position": [
+        -1328,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "rayengester@gmail.com",
+          "mode": "id"
+        },
+        "start": "={{ $json.slotStart }}",
+        "end": "={{ $json.slotEnd }}",
+        "additionalFields": {
+          "description": "={{ $json.detail + ($json.reason ? ('\\n\\nWhy scheduled here: ' + $json.reason) : '') }}",
+          "summary": "={{ $json.topic }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "id": "fa170beb-4f65-4fcf-a98f-b72855439453",
+      "name": "Create Calendar Event",
+      "position": [
+        -1040,
+        1136
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "49jg5UTi87yFzhHQ",
+          "name": "Google Calendar OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1pon9GOZusa3TGinYHp1gzDCeBPm_HA_4XH2ElWws2kA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "requestId": "={{ $('Expand Parts').item.json.requestId }}",
+            "eventId": "={{ $json.id }}",
+            "session": "={{ $('Expand Parts').item.json.session }}",
+            "topic": "={{ $('Expand Parts').item.json.topic }}",
+            "detail": "={{ $('Expand Parts').item.json.detail }}",
+            "reason": "={{ $('Expand Parts').item.json.reason }}",
+            "start": "={{ $('Expand Parts').item.json.slotStart }}",
+            "end": "={{ $('Expand Parts').item.json.slotEnd }}",
+            "status": "scheduled"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "id": "214059aa-8504-4e12-a275-fe149d6b367b",
+      "name": "Write Task Tracker",
+      "position": [
+        -816,
+        1136
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bpURsJOlR99Ca5XS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const parts=$('Expand Parts').all().map(i=>i.json);\nreturn [{ json:{ status:'scheduled', sessions:parts.length, requestId:$('Parse & Schedule').first().json.requestId, message:parts.length+' sessions scheduled to your calendar and sheet, each with a reason. Done.' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "e22db67b-0987-483a-aa4e-3d424a08488b",
+      "name": "Final Output",
+      "position": [
+        -592,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j=$json;\nif('plausible' in j && j.plausible===false){return [{ json:{ status:'implausible_target', reason:j.reason||'', message:'Not plausible: '+(j.reason||'') } }];}\nreturn [{ json:{ status:'stopped' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "914b2427-079a-4f60-a505-cc5386e7f85e",
+      "name": "Exit - Stopped",
+      "position": [
+        -1840,
+        1376
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "rayengester@gmail.com",
+        "subject": "Study plan request could not be fulfilled",
+        "message": "={{ 'Unfortunately, your study target is not achievable within the given deadline.\\n\\nReason: ' + $json.reason + '\\n\\nPlease submit a new request with a more realistic goal or a longer deadline.' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "id": "2cf86add-edd2-405b-84b1-9da70e3d3a29",
+      "name": "Notify Implausible Target",
+      "position": [
+        -1616,
+        1376
+      ],
+      "webhookId": "90326298-b994-47ae-a2e9-0cb4aec15736",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yvSn6I5dLkWrZ84y",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract decline reason and parse any time-window constraint from it.\n// This runs only on the decline branch, before AI Revise Plan.\nconst approval = $('Propose Plan & Wait Approval').first().json;\nconst declineReason = (approval.data && approval.data['Reason (if declining)']) || '';\nconst prev = $('Parse & Schedule').first().json;\n\nlet earliestHour = 9;\nlet latestHour   = 20;\nconst timeMatch = declineReason.match(/(\\d{1,2})\\s*(?:am|AM)?\\s*(?:to|-)\\s*(\\d{1,2})\\s*(am|pm|AM|PM)/i);\nif (timeMatch) {\n  earliestHour = parseInt(timeMatch[1]);\n  let endH = parseInt(timeMatch[2]);\n  if (/pm/i.test(timeMatch[3]) && endH < 12) endH += 12;\n  latestHour = endH;\n}\n\nreturn [{ json: { ...prev, declineReason, earliestHour, latestHour } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "id": "1ffa12ea-96df-47b7-8dad-e5c59872b832",
+      "name": "Extract Decline Context",
+      "position": [
+        -1504,
+        1472
+      ]
+    }
+  ],
+  "connections": {
+    "On Form Submission": {
+      "main": [
+        [
+          {
+            "node": "Requirement Intake",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requirement Intake": {
+      "main": [
+        [
+          {
+            "node": "AI Prerequisite Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Prerequisite Generator": {
+      "main": [
+        [
+          {
+            "node": "Parse Prerequisites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Prerequisites": {
+      "main": [
+        [
+          {
+            "node": "Prerequisite Questions Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prerequisite Questions Form": {
+      "main": [
+        [
+          {
+            "node": "Parse Prerequisite Answers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Prerequisite Answers": {
+      "main": [
+        [
+          {
+            "node": "Form Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Form Complete": {
+      "main": [
+        [
+          {
+            "node": "AI Syllabus Designer (thinking)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Syllabus Designer (thinking)": {
+      "main": [
+        [
+          {
+            "node": "Parse & Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Prerequisite Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI Syllabus Designer (thinking)",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI Revise Plan",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model (Fallback)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Prerequisite Generator",
+            "type": "ai_languageModel",
+            "index": 1
+          },
+          {
+            "node": "AI Syllabus Designer (thinking)",
+            "type": "ai_languageModel",
+            "index": 1
+          },
+          {
+            "node": "AI Revise Plan",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Parse & Schedule": {
+      "main": [
+        [
+          {
+            "node": "Check Plausible",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Plausible": {
+      "main": [
+        [
+          {
+            "node": "Propose Plan & Wait Approval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Exit - Stopped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Propose Plan & Wait Approval": {
+      "main": [
+        [
+          {
+            "node": "Check Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Approved": {
+      "main": [
+        [
+          {
+            "node": "Expand Parts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Decline Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Revise Plan": {
+      "main": [
+        [
+          {
+            "node": "Parse & Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Parts": {
+      "main": [
+        [
+          {
+            "node": "Create Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Write Task Tracker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Task Tracker": {
+      "main": [
+        [
+          {
+            "node": "Final Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exit - Stopped": {
+      "main": [
+        [
+          {
+            "node": "Notify Implausible Target",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Decline Context": {
+      "main": [
+        [
+          {
+            "node": "AI Revise Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ef915a76eb813d5e3caab940405d6c2de2402c0b61fea4ba69cb71bc37bd2f59"
+  }
+}
