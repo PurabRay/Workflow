@@ -5,6 +5,8 @@ This n8n workflow that turns a short study request into a fully scheduled study 
 
 
 **Problem → Workflow Mapping**
+
+
  student says, in vague terms, what they want to learn and by when. To turn that into something useful, the system has to:
 
 Figure out whether the request is even feasible by the deadline.
@@ -18,6 +20,8 @@ Persist the final schedule to both Google Calendar and a tracking spreadsheet, w
 The workflow maps each of those onto its own node (or small group of nodes), with deterministic code handling everything that doesn't need judgment and LLM calls only where judgment is required.
 
 **Architecture**
+
+
 Form Trigger
     ↓
 Requirement Intake  ──── defaults applied if blank
@@ -40,11 +44,15 @@ Expand Parts → Create Calendar Event → Write Task Tracker → Final Output
 Two LLM models share the AI chains: Gemini (primary) with Groq wired as a fallback through n8n's needsFallback mechanism.
 
 **AI vs Deterministic Steps**
-The split was deliberate. LLMs handle ambiguity and content; code handles math, time, and structure.
+
+
+LLMs handle ambiguity and content; code handles math, time, and structure.
 StepTypeWhyRequirement IntakeDeterministicJust normalizes form input and fills defaults.AI Prerequisite GeneratorLLMGenerating relevant prerequisite questions requires judgment about the topic and level.Parse Prerequisites / AnswersDeterministicJSON parsing and shaping.AI Syllabus Designer (thinking)LLMThe core reasoning step: decides syllabus scope, per-topic session counts, feasibility, and records its self-reasoning in a thoughts field.Parse & ScheduleDeterministicPads to the level minimum, flattens the syllabus into sessions, spreads them across days, clamps to daytime, computes ISO times in Asia/Kolkata. Time math should not be left to an LLM.Check Plausible / Check ApprovedDeterministicBranch decisions on explicit fields.AI Revise PlanLLMReads the user's free-text decline reason and the previous plan, then redesigns the syllabus to address it.Expand PartsDeterministicFans the plan into one item per session.Create Calendar Event / Write Task TrackerDeterministic (tool calls)External side effects.
 
-Branching Logic
-Three branch points, each guarding a different kind of failure:
+Branching Logic:
+
+
+There are three different branch plates.
 
 Plausibility branch — AI Syllabus Designer returns plausible: false for absurd targets (e.g., "master quantum mechanics in 5 minutes"). The workflow exits with a reason instead of proposing a doomed plan.
 Approval branch — the approval email is a custom form with an Approve / Decline dropdown plus a free-text "Reason (if declining)" field. Approve commits to calendar + sheet. Decline routes to the revision loop.
@@ -52,6 +60,8 @@ Revision loop — AI Revise Plan receives the user's reason and the prior plan, 
 
 
 Human-in-the-Loop
+
+
 The Gmail sendAndWait node pauses the workflow until the user responds. The response form has structured fields, so the downstream logic can read them as data, not free text:
 
 data["Approve this plan?"] — "Approve" or "Decline" (drives the branch).
@@ -60,6 +70,8 @@ data["Reason (if declining)"] — feeds the revise prompt verbatim, so the AI se
 This means a decline is not a dead end — it's a signal the planner uses to do a better job on the next iteration.
 
 Structured Outputs
+
+
 Every AI chain returns strict JSON (no markdown fences), parsed deterministically. The syllabus schema is:
 json{
   "plausible": true,
@@ -75,6 +87,8 @@ requestId, eventId, session, topic, detail, reason, start, end, status
 requestId ties all sessions of one plan together; eventId is the Google Calendar event ID; reason carries the AI's per-session rationale into both the calendar event description and the spreadsheet.
 
 Scheduling Rules
+
+
 The scheduler in Parse & Schedule enforces:
 
 Timezone — all times are computed in Asia/Kolkata and emitted as ISO strings with a +05:30 offset.
@@ -94,6 +108,8 @@ Padding rule — if the AI returns fewer than the minimum, sessions are added ro
 
 
 **Setup**
+
+
 Credentials required
 Servicen8n credential typeGoogle GeminigooglePalmApiGroqgroqApi (fallback model)GmailgmailOAuth2Google CalendargoogleCalendarOAuth2ApiGoogle SheetsgoogleSheetsOAuth2Api
 The workflow file references specific credential IDs from the author's instance. Reselect each from the dropdown after importing.
