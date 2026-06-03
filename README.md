@@ -1,4 +1,6 @@
 **Personal Study-Planner — Agentic Workflow**
+
+
 This n8n workflow that turns a short study request into a fully scheduled study plan on Google Calendar and a Google Sheet, with AI reasoning for every session and a human-in-the-loop approval step that revises the plan if the user declines with a reason.
 
 
