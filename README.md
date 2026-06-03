@@ -49,7 +49,7 @@ Two LLM models share the AI chains: Gemini (primary) with Groq wired as a fallba
 LLMs handle ambiguity and content; code handles math, time, and structure.
 StepTypeWhyRequirement IntakeDeterministicJust normalizes form input and fills defaults.AI Prerequisite GeneratorLLMGenerating relevant prerequisite questions requires judgment about the topic and level.Parse Prerequisites / AnswersDeterministicJSON parsing and shaping.AI Syllabus Designer (thinking)LLMThe core reasoning step: decides syllabus scope, per-topic session counts, feasibility, and records its self-reasoning in a thoughts field.Parse & ScheduleDeterministicPads to the level minimum, flattens the syllabus into sessions, spreads them across days, clamps to daytime, computes ISO times in Asia/Kolkata. Time math should not be left to an LLM.Check Plausible / Check ApprovedDeterministicBranch decisions on explicit fields.AI Revise PlanLLMReads the user's free-text decline reason and the previous plan, then redesigns the syllabus to address it.Expand PartsDeterministicFans the plan into one item per session.Create Calendar Event / Write Task TrackerDeterministic (tool calls)External side effects.
 
-Branching Logic:
+**Branching Logic:**
 
 
 There are three different branch plates.
@@ -59,7 +59,7 @@ Approval branch — the approval email is a custom form with an Approve / Declin
 Revision loop — AI Revise Plan receives the user's reason and the prior plan, returns a revised syllabus, which goes back through Parse & Schedule and a new approval email. The loop continues until the user approves (or stops responding).
 
 
-Human-in-the-Loop
+**Human-in-the-Loop**
 
 
 The Gmail sendAndWait node pauses the workflow until the user responds. The response form has structured fields, so the downstream logic can read them as data, not free text:
@@ -69,7 +69,7 @@ data["Reason (if declining)"] — feeds the revise prompt verbatim, so the AI se
 
 This means a decline is not a dead end — it's a signal the planner uses to do a better job on the next iteration.
 
-Structured Outputs
+**Structured Outputs**
 
 
 Every AI chain returns strict JSON (no markdown fences), parsed deterministically. The syllabus schema is:
@@ -86,7 +86,7 @@ The final scheduled output (used by the calendar and sheet) is shaped per sessio
 requestId, eventId, session, topic, detail, reason, start, end, status
 requestId ties all sessions of one plan together; eventId is the Google Calendar event ID; reason carries the AI's per-session rationale into both the calendar event description and the spreadsheet.
 
-Scheduling Rules
+**Scheduling Rules**
 
 
 The scheduler in Parse & Schedule enforces:
