@@ -1,8 +1,8 @@
-Personal Study-Planner — Agentic Workflow
+**Personal Study-Planner — Agentic Workflow**
 This n8n workflow that turns a short study request into a fully scheduled study plan on Google Calendar and a Google Sheet, with AI reasoning for every session and a human-in-the-loop approval step that revises the plan if the user declines with a reason.
 
 
-Problem → Workflow Mapping
+**Problem → Workflow Mapping**
  student says, in vague terms, what they want to learn and by when. To turn that into something useful, the system has to:
 
 Figure out whether the request is even feasible by the deadline.
@@ -15,7 +15,7 @@ Persist the final schedule to both Google Calendar and a tracking spreadsheet, w
 
 The workflow maps each of those onto its own node (or small group of nodes), with deterministic code handling everything that doesn't need judgment and LLM calls only where judgment is required.
 
-Architecture
+**Architecture**
 Form Trigger
     ↓
 Requirement Intake  ──── defaults applied if blank
@@ -37,7 +37,7 @@ Check Approved ──false──→ AI Revise Plan ─→ back to Parse & Schedu
 Expand Parts → Create Calendar Event → Write Task Tracker → Final Output
 Two LLM models share the AI chains: Gemini (primary) with Groq wired as a fallback through n8n's needsFallback mechanism.
 
-AI vs Deterministic Steps
+**AI vs Deterministic Steps**
 The split was deliberate. LLMs handle ambiguity and content; code handles math, time, and structure.
 StepTypeWhyRequirement IntakeDeterministicJust normalizes form input and fills defaults.AI Prerequisite GeneratorLLMGenerating relevant prerequisite questions requires judgment about the topic and level.Parse Prerequisites / AnswersDeterministicJSON parsing and shaping.AI Syllabus Designer (thinking)LLMThe core reasoning step: decides syllabus scope, per-topic session counts, feasibility, and records its self-reasoning in a thoughts field.Parse & ScheduleDeterministicPads to the level minimum, flattens the syllabus into sessions, spreads them across days, clamps to daytime, computes ISO times in Asia/Kolkata. Time math should not be left to an LLM.Check Plausible / Check ApprovedDeterministicBranch decisions on explicit fields.AI Revise PlanLLMReads the user's free-text decline reason and the previous plan, then redesigns the syllabus to address it.Expand PartsDeterministicFans the plan into one item per session.Create Calendar Event / Write Task TrackerDeterministic (tool calls)External side effects.
 
@@ -91,7 +91,7 @@ Expert / Professional: 7
 Padding rule — if the AI returns fewer than the minimum, sessions are added round-robin across the existing topics so every topic stays covered.
 
 
-Setup
+**Setup**
 Credentials required
 Servicen8n credential typeGoogle GeminigooglePalmApiGroqgroqApi (fallback model)GmailgmailOAuth2Google CalendargoogleCalendarOAuth2ApiGoogle SheetsgoogleSheetsOAuth2Api
 The workflow file references specific credential IDs from the author's instance. Reselect each from the dropdown after importing.
@@ -101,7 +101,7 @@ requestId | eventId | session | topic | detail | reason | start | end | status
 Form usage
 All form fields are optional. Submit blank to run with the built-in sample (React Hooks, Undergraduate, deadline = now + 7 days). Type any field to override. For demoing on a short window, type a near deadline like 2026-06-05 18:30.
 
-Files
+**Files**
 
 workflow.json — the n8n workflow.
 Demo video — https://www.loom.com/share/1c5b3f75689d4c57b473c446e7fc223b
